@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sakura HD — AI Photo Enhancer</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sakura: #f2a7c3;
+    --sakura-deep: #d4638a;
+    --petal: #fde8f0;
+    --ink: #1a0a12;
+    --mist: #f9eff5;
+    --gold: #c9956b;
+    --lavender: #c8b4d9;
+    --paper: #fff8fb;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* === PETALS BACKGROUND === */
+  .petals-bg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .petal {
+    position: absolute;
+    width: 12px;
+    height: 14px;
+    background: radial-gradient(ellipse at 40% 35%, #fff0f6, #f9b8cf88);
+    border-radius: 50% 0 50% 0;
+    opacity: 0;
+    animation: fall linear infinite;
+    filter: drop-shadow(0 1px 2px #e8a0bf44);
+  }
+  @keyframes fall {
+    0%   { transform: translateY(-40px) rotate(0deg) translateX(0); opacity: 0.7; }
+    80%  { opacity: 0.5; }
+    100% { transform: translateY(110vh) rotate(360deg) translateX(60px); opacity: 0; }
+  }
+
+  /* === LAYOUT === */
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+  }
+
+  /* === HEADER === */
+  header {
+    text-align: center;
+    padding: 52px 0 36px;
+    position: relative;
+  }
+  .jp-sub {
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: var(--sakura-deep);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    opacity: 0.8;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.4rem, 6vw, 3.8rem);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--ink);
+    letter-spacing: -1px;
+  }
+  header h1 span {
+    color: var(--sakura-deep);
+    font-style: italic;
+  }
+  .tagline {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #8a5570;
+    letter-spacing: 1px;
+  }
+  .divider {
+    margin: 22px auto 0;
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--sakura), transparent);
+  }
+
+  /* === API KEY SECTION === */
+  .api-section {
+    background: white;
+    border: 1.5px solid #f0d6e4;
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 20px #f2a7c315;
+  }
+  .api-section label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--sakura-deep);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+  .api-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .api-input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1.5px solid #e8c4d4;
+    border-radius: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--mist);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .api-input:focus { border-color: var(--sakura-deep); }
+  .api-note {
+    font-size: 11px;
+    color: #b07090;
+    margin-top: 8px;
+  }
+  .api-note a { color: var(--sakura-deep); text-decoration: none; font-weight: 700; }
+  .api-note a:hover { text-decoration: underline; }
+
+  /* === UPLOAD ZONE === */
+  .upload-zone {
+    border: 2px dashed #e8b4cc;
+    border-radius: 20px;
+    background: linear-gradient(145deg, #fff5f9, #fef0f7);
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .upload-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, #f9c8e020, transparent 70%);
+    pointer-events: none;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--sakura-deep);
+    background: linear-gradient(145deg, #fff0f6, #fde8f3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px #f2a7c325;
+  }
+  .upload-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+    filter: drop-shadow(0 2px 4px #f2a7c355);
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+  }
+  .upload-zone h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .upload-zone p {
+    font-size: 13px;
+    color: #b07090;
+  }
+  #fileInput { display: none; }
+
+  /* === SCALE OPTIONS === */
+  .options-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .option-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--sakura-deep);
+    text-transform: uppercase;
+    font-weight: 700;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  .scale-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 0;
+    border: 1.5px solid #e8c4d4;
+    border-radius: 12px;
+    background: white;
+    cursor: pointer;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #a06080;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .scale-btn.active, .scale-btn:hover {
+    border-color: var(--sakura-deep);
+    background: linear-gradient(135deg, #fde8f0, #f9d0e4);
+    color: var(--sakura-deep);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px #f2a7c330;
+  }
+
+  /* === PREVIEW AREA === */
+  .preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .preview-card {
+    background: white;
+    border: 1.5px solid #f0d6e4;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 16px #f2a7c310;
+  }
+  .preview-card-header {
+    padding: 10px 16px;
+    background: linear-gradient(90deg, #fff5f9, #fde8f0);
+    border-bottom: 1px solid #f0d6e4;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--sakura-deep);
+    text-transform: uppercase;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .preview-card img {
+    width: 100%;
+    height: 240px;
+    object-fit: contain;
+    background: var(--mist);
+    display: block;
+  }
+  .preview-placeholder {
+    width: 100%;
+    height: 240px;
+    background: var(--mist);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    color: #d4a0ba;
+    font-size: 13px;
+  }
+  .preview-placeholder .ph-icon { font-size: 32px; }
+  .info-pill {
+    background: #fde8f0;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 10px;
+    color: var(--sakura-deep);
+    font-weight: 700;
+  }
+
+  /* === BUTTON === */
+  .btn-enhance {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--sakura-deep), #c9507a, var(--sakura-deep));
+    background-size: 200% auto;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 24px #d4638a44;
+  }
+  .btn-enhance:hover:not(:disabled) {
+    background-position: right center;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px #d4638a55;
+  }
+  .btn-enhance:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-enhance .shimmer {
+    position: absolute;
+    top: 0; left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    animation: shimmer 2s infinite;
+  }
+  @keyframes shimmer {
+    100% { left: 200%; }
+  }
+
+  .btn-download {
+    width: 100%;
+    padding: 13px;
+    background: white;
+    color: var(--sakura-deep);
+    border: 2px solid var(--sakura-deep);
+    border-radius: 14px;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: none;
+  }
+  .btn-download:hover {
+    background: var(--petal);
+    transform: translateY(-1px);
+  }
+
+  /* === STATUS BAR === */
+  .status-bar {
+    background: white;
+    border: 1.5px solid #f0d6e4;
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin-bottom: 18px;
+    font-size: 13px;
+    color: #8a5570;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .status-bar.show { display: flex; }
+  .status-bar.error { border-color: #f9a8c4; background: #fff5f7; color: #c94070; }
+  .status-bar.success { border-color: #a8dfb4; background: #f3fff5; color: #2a7a40; }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid #f0d6e4;
+    border-top-color: var(--sakura-deep);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* === FOOTER === */
+  footer {
+    text-align: center;
+    padding: 32px 0 0;
+    font-size: 11px;
+    color: #c4a0b4;
+    letter-spacing: 1px;
+  }
+  footer span { color: var(--sakura-deep); }
+
+  @media (max-width: 520px) {
+    .preview-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Petals -->
+<div class="petals-bg" id="petalsBg"></div>
+
+<div class="wrapper">
+
+  <header>
+    <div class="jp-sub">桜 HD ✦ AI Photo Enhancer</div>
+    <h1>Sakura <span>HD</span></h1>
+    <p class="tagline">Perjernih fotomu dengan AI — gratis, cepat, indah 🌸</p>
+    <div class="divider"></div>
+  </header>
+
+  <!-- API Key -->
+  <div class="api-section">
+    <label>🔑 DeepAI API Key</label>
+    <div class="api-row">
+      <input type="password" id="apiKey" class="api-input" placeholder="Masukkan API key kamu di sini...">
+    </div>
+    <p class="api-note">
+      Dapet API key gratis di <a href="https://deepai.org" target="_blank">deepai.org</a> → Sign up → Dashboard → API Key kamu ada di sana ✨
+    </p>
+  </div>
+
+  <!-- Upload Zone -->
+  <div class="upload-zone" id="uploadZone">
+    <span class="upload-icon">🖼️</span>
+    <h3>Drop foto di sini atau klik untuk pilih</h3>
+    <p>Mendukung JPG, PNG, WEBP · Max 10MB</p>
+    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+  </div>
+
+  <!-- Scale Options -->
+  <div class="options-row">
+    <span class="option-label">✦ Output Mode</span>
+    <button class="scale-btn active" data-mode="waifu2x">🌸 Waifu2x (Soft)</button>
+    <button class="scale-btn" data-mode="torch-srgan">⚡ SRGAN (Sharp)</button>
+    <button class="scale-btn" data-mode="neuralhancer">🔮 Neuralhancer</button>
+  </div>
+
+  <!-- Preview Grid -->
+  <div class="preview-grid">
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <span>SEBELUM</span>
+        <span class="info-pill" id="origSize">—</span>
+      </div>
+      <div id="origPreview" class="preview-placeholder">
+        <span class="ph-icon">🌫️</span>
+        <span>Belum ada foto</span>
+      </div>
+    </div>
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <span>SESUDAH — HD</span>
+        <span class="info-pill" id="hdSize">AI Enhanced</span>
+      </div>
+      <div id="hdPreview" class="preview-placeholder">
+        <span class="ph-icon">✨</span>
+        <span>Hasil akan muncul di sini</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar" id="statusBar">
+    <div class="spinner" id="statusSpinner"></div>
+    <span id="statusMsg">Memproses foto...</span>
+  </div>
+
+  <!-- Buttons -->
+  <button class="btn-enhance" id="btnEnhance" disabled>
+    <div class="shimmer"></div>
+    🌸 Enhance Photo
+  </button>
+  <button class="btn-download" id="btnDownload">⬇️ Download Foto HD</button>
+
+  <footer>
+    made with <span>♥</span> &amp; sakura petals · powered by DeepAI Super Resolution
+  </footer>
+
+</div>
+
+<script>
+// === PETALS ===
+(function() {
+  const bg = document.getElementById('petalsBg');
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement('div');
+    p.className = 'petal';
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.animationDuration = (6 + Math.random() * 10) + 's';
+    p.style.animationDelay = (Math.random() * 12) + 's';
+    p.style.transform = `rotate(${Math.random()*360}deg)`;
+    p.style.width = (8 + Math.random() * 10) + 'px';
+    bg.appendChild(p);
+  }
+})();
+
+// === STATE ===
+let selectedFile = null;
+let selectedMode = 'waifu2x';
+let hdImageUrl = null;
+const API_ENDPOINTS = {
+  'waifu2x':     'https://api.deepai.org/api/waifu2x',
+  'torch-srgan': 'https://api.deepai.org/api/torch-srgan',
+  'neuralhancer': 'https://api.deepai.org/api/neuralhancer'
+};
+
+// === UPLOAD ZONE ===
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  if (!file.type.startsWith('image/')) return showStatus('error', '❌ File harus berupa gambar!');
+  if (file.size > 10 * 1024 * 1024) return showStatus('error', '❌ File terlalu besar! Max 10MB.');
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const imgEl = document.createElement('img');
+    imgEl.src = e.target.result;
+    imgEl.onload = () => {
+      document.getElementById('origSize').textContent = `${imgEl.naturalWidth}×${imgEl.naturalHeight}`;
+    };
+    const orig = document.getElementById('origPreview');
+    orig.innerHTML = '';
+    orig.appendChild(imgEl);
+
+    // Reset HD side
+    document.getElementById('hdPreview').innerHTML = '<span class="ph-icon">✨</span><span>Klik Enhance!</span>';
+    document.getElementById('hdPreview').className = 'preview-placeholder';
+    document.getElementById('hdSize').textContent = 'AI Enhanced';
+    document.getElementById('btnDownload').style.display = 'none';
+    hdImageUrl = null;
+  };
+  reader.readAsDataURL(file);
+  document.getElementById('btnEnhance').disabled = false;
+  hideStatus();
+}
+
+// === MODE BUTTONS ===
+document.querySelectorAll('.scale-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedMode = btn.dataset.mode;
+  });
+});
+
+// === ENHANCE ===
+document.getElementById('btnEnhance').addEventListener('click', async () => {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) return showStatus('error', '❌ Isi API key dulu ya, beb 🙏');
+  if (!selectedFile) return showStatus('error', '❌ Upload foto dulu!');
+
+  const btn = document.getElementById('btnEnhance');
+  btn.disabled = true;
+  showStatus('loading', '🌸 Lagi nge-HD-in foto kamu... sabar ya~');
+
+  try {
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+
+    const endpoint = API_ENDPOINTS[selectedMode];
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'api-key': apiKey },
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (data.err) throw new Error(data.err);
+    if (!data.output_url) throw new Error('Respons API tidak valid, coba lagi!');
+
+    hdImageUrl = data.output_url;
+
+    const hdImg = document.createElement('img');
+    hdImg.src = hdImageUrl;
+    hdImg.crossOrigin = 'anonymous';
+    hdImg.onload = () => {
+      document.getElementById('hdSize').textContent = `${hdImg.naturalWidth}×${hdImg.naturalHeight}`;
+    };
+    const hdPrev = document.getElementById('hdPreview');
+    hdPrev.innerHTML = '';
+    hdPrev.className = '';
+    hdPrev.style.background = 'var(--mist)';
+    hdPrev.appendChild(hdImg);
+
+    document.getElementById('btnDownload').style.display = 'block';
+    showStatus('success', '✨ Mantap! Foto kamu udah HD nih, silakan download~');
+
+  } catch (err) {
+    showStatus('error', '❌ ' + (err.message || 'Gagal proses, cek API key & koneksi.'));
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// === DOWNLOAD ===
+document.getElementById('btnDownload').addEventListener('click', async () => {
+  if (!hdImageUrl) return;
+  try {
+    const res = await fetch(hdImageUrl);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sakura-hd-' + Date.now() + '.jpg';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    // Fallback: open in new tab
+    window.open(hdImageUrl, '_blank');
+  }
+});
+
+// === STATUS HELPERS ===
+function showStatus(type, msg) {
+  const bar = document.getElementById('statusBar');
+  const spinner = document.getElementById('statusSpinner');
+  const msgEl = document.getElementById('statusMsg');
+  bar.className = 'status-bar show' + (type === 'error' ? ' error' : type === 'success' ? ' success' : '');
+  spinner.style.display = type === 'loading' ? 'block' : 'none';
+  msgEl.textContent = msg;
+}
+function hideStatus() {
+  document.getElementById('statusBar').className = 'status-bar';
+}
+</script>
+</body>
+</html>
